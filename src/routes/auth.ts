@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { authValidator } from "../validators/authValidator.js";
-import { getUser, login, register } from "../database/auth.js";
+import { getUser, login, logout, register } from "../database/auth.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const auth = new Hono({
@@ -42,6 +42,21 @@ auth.post("/login", authValidator, async (c) => {
     );
   }
 });
+
+auth.post("/logout", async (c) => {
+  try {
+    const sb = c.get("supabase");
+    const result = await logout(sb);
+    return c.json(result, 200);
+  } catch (e: any) {
+    console.warn("Error on logging out", e);
+    return c.json(
+      {
+        message: "Error in logging out"
+      }, 500
+    )
+  }
+})
 
 auth.get("/me", requireAuth, async (c) => {
   const sb = c.get("supabase");

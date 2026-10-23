@@ -28,6 +28,17 @@ export async function login(sb: BasicSupabaseClient, email: string, password: st
   throw error;
 }
 
+export async function logout(sb:BasicSupabaseClient): Promise<{ message: string }> {
+ const { error } = await sb.auth.signOut();
+  if (!error) {
+    return {
+        message: "User logged out successfully",
+    };
+  }
+  throw error;
+}
+
+
 export async function getUser(sb: BasicSupabaseClient): Promise<AuthUser> {
   const { data, error } = await sb.auth.getUser();
   if (!error && data.user) {
