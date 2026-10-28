@@ -42,7 +42,7 @@ function buildPropertiesFilter(
   }
 
   if (filters.maxGuests) {
-    query = query.lte("max_guests", filters.maxGuests);
+    query = query.gte("max_guests", filters.maxGuests);
   }
 
   if (filters.location && filters.location.trim().length > 2) {
