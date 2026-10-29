@@ -1,7 +1,7 @@
 import type { PostgrestSingleResponse } from "@supabase/supabase-js";
 
 import type { BasicSupabaseClient } from "../types/supabase.js";
-import type { NewProperty, Property, PropertyKind, PropertyValidKey } from "../types/property.js";
+import type { NewProperty, Property, PropertyKind, PropertyValidKey, PropertySort } from "../types/property.js";
 
 const TABLE_NAME = "properties";
 
@@ -31,6 +31,7 @@ type PropertyListFilter = Partial<{
   maxPrice: number;
   location: string;
   maxGuests: number;
+  sort: PropertySort;
 }>;
 
 function buildPropertiesFilter(
@@ -47,6 +48,12 @@ function buildPropertiesFilter(
 
   if (filters.location && filters.location.trim().length > 2) {
     query = query.ilike("location", `%${filters.location}%`);
+  }
+  
+  if (filters.sort) {
+    query = query.order("price_per_night", {
+      ascending: filters.sort === "price_asc"
+    })
   }
 }
 

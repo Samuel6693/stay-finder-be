@@ -1,7 +1,7 @@
 import * as z from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { getValidatorError } from "../utils/validation.js";
-import type { PropertyKind } from "../types/property.js";
+import type { PropertyKind, PropertySort } from "../types/property.js";
 
 const propertySchema = z.object({
   title: z.string().min(2, "Title is nececary"),
@@ -15,6 +15,13 @@ const propertySchema = z.object({
     ["apartment", "villa"],
     `Must be one of "apartment", "villa"`,
   ),
+});
+
+const propertySortSchema = z.object({
+  sort: z.enum<PropertySort[]>(
+    ["price_asc", "price_desc"],
+    `Sort must be one of "price_asc", "price_desc"`
+  ).optional() //för anrop som är utan sortering
 });
 
 const propertyOptionalSchema = propertySchema.partial();
@@ -54,4 +61,14 @@ export const propertyParamValidator = zValidator(
       return c.json(getValidatorError(result.error), 400);
     }
   },
+);
+
+export const propertySortValidator = zValidator(
+  "query",
+  propertySortSchema,
+  (result, c) => {
+    if (!result.success) {
+      return c.json(getValidatorError(result.error), 400);
+    }
+  }
 );

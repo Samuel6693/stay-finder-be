@@ -4,6 +4,7 @@ import {
   propertyOptionalValidator,
   propertyParamValidator,
   propertyValidator,
+  propertySortValidator
 } from "../validators/propertyValidator.js";
 import {
   createProperty,
@@ -24,7 +25,7 @@ const properties = new Hono({ strict: false });
 
 // 404 om boendet inte finns, 403 om det tillhör någon annan än användaren
 async function requireOwner(
-  sb: BasicSupabaseClient, 
+  sb: BasicSupabaseClient,
   propertyId: string,
   user: User,
 ) {
@@ -40,13 +41,14 @@ async function requireOwner(
 }
 
 
-properties.get("/", async (c) => {
+properties.get("/", propertySortValidator, async (c) => {
   const sb = c.get("supabase");
   try {
     const properties = await getProperties(sb, {
       maxPrice: Number(c.req.query("maxprice")) || undefined,
       location: c.req.query("location"),
       maxGuests: Number(c.req.query("maxguests")) || undefined,
+      sort: c.req.valid("query").sort,
     });
     return c.json(properties);
   } catch (e) {
@@ -59,7 +61,7 @@ properties.get("/", async (c) => {
 // If not neither of those 400
 // Filter properties based on the kind
 // Extra add all previous search filtering from GET: properties
-properties.get("/kind/:kind", propertyParamValidator, async (c) => {
+properties.get("/kind/:kind", propertyParamValidator, propertySortValidator, async (c) => {
   const kind = c.req.valid("param").kind;
   const sb = c.get("supabase");
   try {
@@ -67,6 +69,7 @@ properties.get("/kind/:kind", propertyParamValidator, async (c) => {
       maxPrice: Number(c.req.query("maxprice")) || undefined,
       location: c.req.query("location"),
       maxGuests: Number(c.req.query("maxguests")) || undefined,
+      sort: c.req.valid("query").sort,
     });
     return c.json(properties);
   } catch (e) {
@@ -125,7 +128,7 @@ properties.patch("/:id", requireAuth, propertyOptionalValidator, async (c) => {
 
 // Extra: "bortagning" av en Property DELETE om den finns tänk en GET som sedan tar bort 200/204
 properties.delete("/:id", requireAuth, async (c) => {
-  const {id: propertyId} = c.req.param();
+  const { id: propertyId } = c.req.param();
   const sb = c.get("supabase");
   const user = c.get("user") as User;
   await requireOwner(sb, propertyId, user);
