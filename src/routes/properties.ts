@@ -17,8 +17,28 @@ import { requireAuth } from "../middleware/auth.js";
 
 import type { User } from "@supabase/supabase-js";
 import type { Property } from "../types/property.js";
+import { HTTPException } from "hono/http-exception";
+import type { BasicSupabaseClient } from "../types/supabase.js";
 
 const properties = new Hono({ strict: false });
+
+// 404 om boendet inte finns, 403 om det tillhör någon annan än användaren
+async function requireOwner(
+  sb: BasicSupabaseClient, 
+  propertyId: string,
+  user: User,
+) {
+  let property: Property;
+  try {
+    property = await getPropertyById(sb, propertyId);
+  } catch {
+    throw new HTTPException(404, { message: "property not found" });
+  }
+  if (property.user_id !== user.id) {
+    throw new HTTPException(403, { message: "forbidden" });
+  }
+}
+
 
 properties.get("/", async (c) => {
   const sb = c.get("supabase");
@@ -76,7 +96,7 @@ properties.post("/", requireAuth, propertyValidator, async (c) => {
   try {
     const property = await createProperty(sb, {
       ...propertyBody,
-      user_id: "a42a611c-202e-4c76-a68e-bcbee5cc286b" //user.id
+      user_id: user.id
     });
     return c.json(property, 201);
   } catch (e) {
@@ -92,6 +112,8 @@ properties.patch("/:id", requireAuth, propertyOptionalValidator, async (c) => {
   let propertyBody: Partial<Property> = c.req.valid("json");
   delete propertyBody.user_id
   const sb = c.get("supabase");
+  const user = c.get("user") as User;
+  await requireOwner(sb, propertyId, user);
   try {
     const property = await updatePropertyById(sb, propertyId, propertyBody);
     return c.json(property);
@@ -102,9 +124,11 @@ properties.patch("/:id", requireAuth, propertyOptionalValidator, async (c) => {
 });
 
 // Extra: "bortagning" av en Property DELETE om den finns tänk en GET som sedan tar bort 200/204
-properties.delete("/:id", async (c) => {
-  const propertyId = c.req.param("id");
+properties.delete("/:id", requireAuth, async (c) => {
+  const {id: propertyId} = c.req.param();
   const sb = c.get("supabase");
+  const user = c.get("user") as User;
+  await requireOwner(sb, propertyId, user);
   try {
     await deletePropertyById(sb, propertyId);
     return c.json(null, 200);
