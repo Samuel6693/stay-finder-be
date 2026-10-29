@@ -15,8 +15,6 @@ const propertySchema = z.object({
     ["apartment", "villa"],
     `Must be one of "apartment", "villa"`,
   ),
-  property_id: z.string().optional(),
-  created_at: z.string().optional(),
 });
 
 const propertyOptionalSchema = propertySchema.partial();
