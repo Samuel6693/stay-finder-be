@@ -30,7 +30,7 @@ bookings.get("/properties/:propertyId", async (c) => {
 });
 
 // Skapa en Booking för en Property, property_id tas från URL:en
-bookings.post("/properties/:propertyId", bookingValidator, requireAuth, async (c) => {
+bookings.post("/properties/:propertyId", requireAuth,bookingValidator, async (c) => {
   const propertyId = c.req.param("propertyId");
   const bookingBody = c.req.valid("json");
   const sb = c.get("supabase")
