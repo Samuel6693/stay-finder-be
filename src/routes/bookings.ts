@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { PostgrestError, User } from "@supabase/supabase-js";
+import { getPropertyById } from "../database/properties.js";
 
 import {
   bookingOptionalValidator,
@@ -30,11 +31,22 @@ bookings.get("/properties/:propertyId", async (c) => {
 });
 
 // Skapa en Booking för en Property, property_id tas från URL:en
-bookings.post("/properties/:propertyId", requireAuth,bookingValidator, async (c) => {
+bookings.post("/properties/:propertyId", requireAuth, bookingValidator, async (c) => {
   const propertyId = c.req.param("propertyId");
   const bookingBody = c.req.valid("json");
   const sb = c.get("supabase")
   const user = c.get("user") as User
+  const property = await getPropertyById(sb, propertyId).catch(() => null)
+  if (!property) {
+    return c.json(null, 404);
+  }
+  if (bookingBody.guests > property.max_guests) {
+    return c.json(
+      { errors: [["guests", `This stay fits at most ${property.max_guests} guests`]] },
+      400,
+    );
+  }
+
   try {
     const booking = await createBooking(sb, {
       ...bookingBody,
