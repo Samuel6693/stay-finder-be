@@ -27,13 +27,9 @@ const bookingSchema = bookingObject.refine(
   dateOrder,
 );
 
-const bookingOptionalSchema = bookingObject
-  .partial()
-  .refine(
-    (data) =>
-      !data.check_in || !data.check_out || data.check_in < data.check_out,
-    dateOrder,
-  );
+const bookingUpdateSchema = bookingObject
+  .pick({ check_in: true, check_out: true, guests: true }) // Only allow updating check_in, check_out, and guests
+  .refine((data) => data.check_in < data.check_out, dateOrder); // Check in date must be earlier than check out date
 
 export const bookingValidator = zValidator(
   "json",
@@ -45,9 +41,9 @@ export const bookingValidator = zValidator(
   },
 );
 
-export const bookingOptionalValidator = zValidator(
+export const bookingUpdateValidator = zValidator(
   "json",
-  bookingOptionalSchema,
+  bookingUpdateSchema,
   (result, c) => {
     if (!result.success) {
       return c.json(getValidatorError(result.error), 400);
