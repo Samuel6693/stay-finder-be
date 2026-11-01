@@ -3,7 +3,7 @@ import type { PostgrestError, User } from "@supabase/supabase-js";
 import { getPropertyById } from "../database/properties.js";
 
 import {
-  bookingOptionalValidator,
+  bookingUpdateValidator,
   bookingValidator,
 } from "../validators/bookingValidator.js";
 import {
@@ -19,10 +19,11 @@ const FOREIGN_KEY_VIOLATION = "23503";
 const bookings = new Hono({ strict: false });
 
 // Lista alla bookings för en Property
-bookings.get("/properties/:propertyId", async (c) => {
-  const propertyId = c.req.param("propertyId");
+bookings.get("/properties/:propertyId", requireAuth, async (c) => {
+  const { propertyId } = c.req.param();
+  const sb = c.get("supabase");
   try {
-    const bookings = await getBookingsByPropertyId(propertyId);
+    const bookings = await getBookingsByPropertyId(sb, propertyId);
     return c.json(bookings);
   } catch (e) {
     console.warn("Error in fetching bookings from SB database", e);
@@ -63,30 +64,37 @@ bookings.post("/properties/:propertyId", requireAuth, bookingValidator, async (c
   }
 });
 
-// Uppdatera en Booking om den finns och tillhör Propertyn
-bookings.patch(
-  "/properties/:propertyId/:bookingId",
-  bookingOptionalValidator,
-  async (c) => {
-    const propertyId = c.req.param("propertyId");
-    const bookingId = c.req.param("bookingId");
-    const bookingBody = c.req.valid("json");
-    try {
-      const booking = await updateBooking(propertyId, bookingId, bookingBody);
-      return c.json(booking);
-    } catch (e) {
-      console.warn("Error updating booking in SB DB", e);
-      return c.json(null, 404);
-    }
-  },
+// Uppdatera datum och antal gäster för en egen Booking
+bookings.patch("/properties/:propertyId/:bookingId", requireAuth, bookingUpdateValidator, async (c) => {
+  const { propertyId, bookingId } = c.req.param();
+  const bookingBody = c.req.valid("json");
+  const sb = c.get("supabase");
+  const property = await getPropertyById(sb, propertyId).catch(() => null);
+  if (!property) {
+    return c.json(null, 404);
+  }
+  if (bookingBody.guests > property.max_guests) {
+    return c.json(
+      { errors: [["guests", `This stay fits at most ${property.max_guests} guests`]] },
+      400,
+    );
+  }
+  try {
+    const booking = await updateBooking(sb, propertyId, bookingId, bookingBody);
+    return c.json(booking);
+  } catch (e) {
+    console.warn("Error updating booking in SB DB", e);
+    return c.json(null, 404);
+  }
+},
 );
 
-// Ta bort en Booking om den finns och tillhör Propertyn
-bookings.delete("/properties/:propertyId/:bookingId", async (c) => {
-  const propertyId = c.req.param("propertyId");
-  const bookingId = c.req.param("bookingId");
+// Ta bort en egen Booking
+bookings.delete("/properties/:propertyId/:bookingId", requireAuth, async (c) => {
+  const { propertyId, bookingId } = c.req.param();
+  const sb = c.get("supabase");
   try {
-    await deleteBooking(propertyId, bookingId);
+    await deleteBooking(sb, propertyId, bookingId);
     return c.json(null, 200);
   } catch (e) {
     console.warn("Error in deleting booking", e);
