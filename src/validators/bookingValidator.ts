@@ -11,17 +11,19 @@ const bookingObject = z.object({
   check_out: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Check out date is not valid YYYY-MM-DD"),
-  guests: z.number().min(1, "Guests needs to be at least 1"),
+  guests: z.number()
+    .int("Guests needs to be a whole number")
+    .min(1, "Guests needs to be at least 1"),
   status: z.enum(["pending", "confirmed", "cancelled"]),
 });
 
 const dateOrder = {
-  message: "Check in can't be later than check out",
+  message: "Check out must be after check in",
   path: ["check_in"],
 };
 
 const bookingSchema = bookingObject.refine(
-  (data) => data.check_in <= data.check_out,
+  (data) => data.check_in < data.check_out, // Check in date must be earlier than check out date
   dateOrder,
 );
 
@@ -29,7 +31,7 @@ const bookingOptionalSchema = bookingObject
   .partial()
   .refine(
     (data) =>
-      !data.check_in || !data.check_out || data.check_in <= data.check_out,
+      !data.check_in || !data.check_out || data.check_in < data.check_out,
     dateOrder,
   );
 
