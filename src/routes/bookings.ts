@@ -27,7 +27,7 @@ bookings.get("/properties/:propertyId", requireAuth, async (c) => {
     return c.json(bookings);
   } catch (e) {
     console.warn("Error in fetching bookings from SB database", e);
-    return c.json([]);
+    return c.json({ message: "Could not fetch bookings" }, 500);
   }
 });
 
@@ -60,7 +60,7 @@ bookings.post("/properties/:propertyId", requireAuth, bookingValidator, async (c
     if ((e as PostgrestError).code === FOREIGN_KEY_VIOLATION) {
       return c.json(null, 404);
     }
-    return c.json(e, 500);
+    return c.json({ message: "Could not create booking" }, 500);
   }
 });
 
