@@ -121,7 +121,6 @@ properties.patch("/:id", requireAuth, propertyOptionalValidator, async (c) => {
     const property = await updatePropertyById(sb, propertyId, propertyBody);
     return c.json(property);
   } catch (e) {
-    console.log("Error updating property in SB DB", e);
     return c.json(null, 404);
   }
 });
