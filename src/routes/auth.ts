@@ -38,7 +38,7 @@ auth.post("/login", authValidator, async (c) => {
       {
         message: "Invalid credentials",
       },
-      400,
+      401,
     );
   }
 });

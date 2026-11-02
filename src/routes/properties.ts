@@ -53,7 +53,7 @@ properties.get("/", propertySortValidator, async (c) => {
     return c.json(properties);
   } catch (e) {
     console.warn("Error in fetching properties from SB database", e);
-    return c.json([]);
+    return c.json({ message: "Could not fetch properties" }, 500);
   }
 });
 
@@ -74,7 +74,7 @@ properties.get("/kind/:kind", propertyParamValidator, propertySortValidator, asy
     return c.json(properties);
   } catch (e) {
     console.warn("Error in fetching properties from SB database", e);
-    return c.json([]);
+    return c.json({ message: "Could not fetch properties" }, 500);
   }
 });
 
@@ -104,7 +104,7 @@ properties.post("/", requireAuth, propertyValidator, async (c) => {
     return c.json(property, 201);
   } catch (e) {
     console.warn("error in inserting property into SB DB", e);
-    return c.json(e, 500);
+    return c.json({ message: "Could not create property" }, 500);
   }
 });
 
