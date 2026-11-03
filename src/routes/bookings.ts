@@ -16,6 +16,11 @@ import {
 import { requireAuth } from "../middleware/auth.js";
 
 const FOREIGN_KEY_VIOLATION = "23503";
+const EXCLUSION_VIOLATION = "23P01"; // https://www.postgresql.org/docs/current/errcodes-appendix.html
+
+const BOOKING_OVERLAP_ERROR = {
+  errors: [["check_in", "These dates are already booked"]],
+};
 
 const BOOKING_STARTED_ERROR = {
   errors: [["check_in", "This booking has already started and can't be changed"]],
@@ -66,6 +71,9 @@ bookings.post("/properties/:propertyId", requireAuth, bookingValidator, async (c
     return c.json(booking, 201);
   } catch (e) {
     console.warn("Error in inserting booking into SB DB", e);
+    if ((e as PostgrestError).code === EXCLUSION_VIOLATION) {
+      return c.json(BOOKING_OVERLAP_ERROR, 409);
+    }
     if ((e as PostgrestError).code === FOREIGN_KEY_VIOLATION) {
       return c.json(null, 404);
     }
@@ -100,6 +108,9 @@ bookings.patch("/properties/:propertyId/:bookingId", requireAuth, bookingUpdateV
     return c.json(updatedBooking);
   } catch (e) {
     console.warn("Error updating booking in SB DB", e);
+    if ((e as PostgrestError).code === EXCLUSION_VIOLATION) {
+      return c.json(BOOKING_OVERLAP_ERROR, 409);
+    }
     return c.json(null, 404);
   }
 },
