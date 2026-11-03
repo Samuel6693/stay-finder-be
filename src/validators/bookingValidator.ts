@@ -3,11 +3,15 @@ import { zValidator } from "@hono/zod-validator";
 import { getValidatorError } from "../utils/validation.js";
 
 const bookingObject = z.object({
-  guest_name: z.string().min(2, "Guest name is nececary"),
+  guest_name: z.string().min(2, "Guest name is necessary"),
   guest_email: z.email("Guest email is not valid"),
   check_in: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Check in date is not valid YYYY-MM-DD"),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Check in date is not valid YYYY-MM-DD")
+    .refine(
+      (date) => date >= new Date().toISOString().slice(0, 10),
+      "Check in date must be today or later",
+    ),
   check_out: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Check out date is not valid YYYY-MM-DD"),

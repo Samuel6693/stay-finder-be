@@ -9,12 +9,21 @@ import {
 import {
   createBooking,
   deleteBooking,
+  getBookingById,
   getBookingsByPropertyId,
   updateBooking,
 } from "../database/bookings.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const FOREIGN_KEY_VIOLATION = "23503";
+
+const BOOKING_STARTED_ERROR = {
+  errors: [["check_in", "This booking has already started and can't be changed"]],
+};
+
+function hasStarted(checkIn: string) {
+  return checkIn < new Date().toISOString().slice(0, 10);
+}
 
 const bookings = new Hono({ strict: false });
 
@@ -79,9 +88,16 @@ bookings.patch("/properties/:propertyId/:bookingId", requireAuth, bookingUpdateV
       400,
     );
   }
+  const booking = await getBookingById(sb, propertyId, bookingId).catch(() => null);
+  if (!booking) {
+    return c.json(null, 404);
+  }
+  if (hasStarted(booking.check_in)) {
+    return c.json(BOOKING_STARTED_ERROR, 400);
+  }
   try {
-    const booking = await updateBooking(sb, propertyId, bookingId, bookingBody);
-    return c.json(booking);
+    const updatedBooking = await updateBooking(sb, propertyId, bookingId, bookingBody);
+    return c.json(updatedBooking);
   } catch (e) {
     console.warn("Error updating booking in SB DB", e);
     return c.json(null, 404);
@@ -93,6 +109,14 @@ bookings.patch("/properties/:propertyId/:bookingId", requireAuth, bookingUpdateV
 bookings.delete("/properties/:propertyId/:bookingId", requireAuth, async (c) => {
   const { propertyId, bookingId } = c.req.param();
   const sb = c.get("supabase");
+  const booking = await getBookingById(sb, propertyId, bookingId).catch(() => null);
+  if (!booking) {
+    return c.json(null, 404);
+  }
+  if (hasStarted(booking.check_in)) {
+    return c.json(BOOKING_STARTED_ERROR, 400);
+  }
+
   try {
     await deleteBooking(sb, propertyId, bookingId);
     return c.json(null, 200);
